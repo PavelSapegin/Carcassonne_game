@@ -115,4 +115,7 @@ classDiagram
     InGamePlayer "1" --> "1" PlayerProfile
     StatsService ..> DatabaseRepository : uses
     StatsService ..> PlayerProfile : updates
+    GameSession ..> GameRecord : creates
+    StatsService ..> GameRecord : processes
+    DatabaseRepository ..> GameRecord : saves
 ```
