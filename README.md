@@ -2,120 +2,171 @@
 
 ```mermaid
 classDiagram
-    %% --- Game Core (Domain) ---
-    class GameSession {
-        - Board board
-        - List~InGamePlayer~ players
-        - Stack~Tile~ deck
-        - InGamePlayer currentPlayer
-        - GameState state
-        + StartGame()
-        + PlaceTile(x, y, tile, rotation)
-        + PlaceMeeple(x, y, position)
-        + SkipMeeplePlacement()
-        + EndTurn()
-        - CheckGameEnd()
+
+    class IGameSession {
+        <<interface>>
+        + startGame(playerIds: List~UUID~)
+        + registerMove(request: MoveRequest) MoveResult
+        + undoLastMove()
+        + endGame() GameRecord
+        + getCurrentState() SessionState
     }
 
-    class Board {
-        - Map~Point, Tile~ grid
-        - List~Feature~ activeFeatures
-        + AddTile(Point p, Tile t)
-        + GetValidPlacements(Tile t) List~Point~
-        + MergeFeatures(Tile t)
+    class GameSessionManager {
+        - referee: IRulesEngine
+        - gameRepo: IGameRepository
+        - currentState: SessionState
+        - moveHistory: MutableList~MoveRecord~
     }
 
-    class Tile {
-        + int Id
-        + Rotation rotation
-        - EdgeType top
-        - EdgeType right
-        - EdgeType bottom
-        - EdgeType left
-        + Rotate()
-        + GetEdge(Direction d) EdgeType
+    class IStatsService {
+        <<interface>>
+        + processGameResult(record: GameRecord)
+        + getPlayerStats(playerId: UUID) PlayerStats
+        + getLeaderboard() List~PlayerProfile~
     }
 
-    class Feature {
-        <<abstract>>
-        - List~TileRef~ parts
-        - List~Meeple~ meeples
-        - bool isCompleted
-        + AddPart()
-        + Merge(Feature other)
-        + CalculateScore() int
-    }
-    
-    class CityFeature { }
-    class RoadFeature { }
-    class CloisterFeature { }
-    class FieldFeature { }
-
-    Feature <|-- CityFeature
-    Feature <|-- RoadFeature
-    Feature <|-- CloisterFeature
-    Feature <|-- FieldFeature
-
-    class InGamePlayer {
-        - PlayerProfile profile
-        - Color color
-        - int score
-        - int meeplesLeft
-        + AddScore(int points)
-        + UseMeeple() Meeple
-        + ReturnMeeple()
+    class StatsManager {
+        - playerRepo: IPlayerRepository
     }
 
-    class MoveValidator {
-        + IsTilePlacementValid(Board b, Point p, Tile t) bool
-        + IsMeeplePlacementValid(Feature f) bool
+    class IRulesEngine {
+        <<interface>>
+        + validateMove(board: BoardState, move: MoveRequest): Boolean
+        + calculateIntermediateScore(board: BoardState, move: MoveRequest): List~ScoreEvent~
+        + calculateFinalScore(board: BoardState): List~ScoreEvent~
     }
 
-    class ScoreCalculator {
-        + CheckCompletedFeatures(Board b)
-        + CalculateFinalScores(Board b)
+    class ITileDefinitionRepository {
+    <<interface>>
+    + getDefinition(tileTypeId: Int): TileDefinition
+    }
+    class BoardState {
+        - grid: MutableMap~Point, TileData~
+        + applyMove(move: MoveRequest)
+        + revertMove(move: MoveRequest)
+    }
+        class MoveResult {
+        <<sealed>>
+        + isSuccess: Boolean
+        + errorMessage: String?
+    }
+    class PlayerResult {
+    <<data class>>
+    + playerId: UUID
+    + score: Int
+    + rank: Int
     }
 
-    %% --- Data and Stats (DAL) ---
+    class MoveRequest {
+        <<data class>>
+        + playerId: UUID
+        + tileId: Int
+        + coordinates: Point
+        + rotation: Int
+        + meepleZoneId: Int? 
+    }
+
+    class MoveRecord {
+        <<data class>>
+        + moveNumber: Int
+        + requestData: MoveRequest
+        + timestamp: LocalDateTime
+        + pointsScored: Int
+    }
+
+    class SessionState {
+        <<data class>>
+        + gameId: UUID
+        + status: GameStatus
+        + currentPlayerId: UUID
+        + turnOrder: List~UUID~
+        + players: MutableMap~UUID, PlayerInGameState~
+    }
+
+    class PlayerInGameState {
+        <<data class>>
+        + currentScore: Int
+        + meeplesAvailable: Int
+    }
+
+    class IPlayerRepository {
+        <<interface>>
+        + getById(id: UUID) PlayerProfile? 
+        + save(profile: PlayerProfile)
+        + getAll() List~PlayerProfile~
+    }
+
+    class IGameRepository {
+        <<interface>>
+        + saveRecord(record: GameRecord)
+        + getHistoryByPlayer(playerId: UUID) List~GameRecord~
+    }
+
     class PlayerProfile {
-        + UUID Id
-        + string Username
-        + int Rating
-        + int GamesPlayed
-        + int Wins
+        <<data class>>
+        + id: UUID
+        + username: String
+        + eloRating: Int
+        + gamesPlayed: Int
+        + winRate: Float
     }
 
     class GameRecord {
-        + UUID GameId
-        + DateTime DatePlayed
-        + List~PlayerResult~ Results
+        <<data class>>
+        + gameId: UUID
+        + date: LocalDateTime
+        + finalScores: List~PlayerResult~
+        + history: List~MoveRecord~
     }
 
-    class StatsService {
-        + UpdateRatings(GameRecord record)
-        + GetLeaderboard() List~PlayerProfile~
+    class TileData {
+        <<data class>>
+        + tileTypeId: Int
+        + rotation: Int
+        + placedMeeple: MeeplePlacement?
     }
 
-    class DatabaseRepository {
-        <<interface>>
-        + SaveGame(GameRecord r)
-        + GetPlayer(UUID id)
-        + SavePlayer(PlayerProfile p)
+    class MeeplePlacement {
+        <<data class>>
+        + playerId: UUID
+        + zoneId: Int
     }
 
-    %% Relationships
-    GameSession "1" *-- "1" Board
-    GameSession "1" *-- "2..5" InGamePlayer
-    GameSession "1" o-- "1" MoveValidator
-    GameSession "1" o-- "1" ScoreCalculator
+    class ScoreEvent {
+    <<data class>>
+    + playerId: UUID
+    + points: Int
+
+    + returnedMeeples: Int
+    }
     
-    Board "1" *-- "*" Tile
-    Board "1" *-- "*" Feature
+    BoardState *-- "*" TileData : contains in grid
+    TileData *-- "0..1" MeeplePlacement : holds
+
+    BoardState *-- "*" TileData : contains
+    TileData *-- "0..1" MeeplePlacement : holds
+
+    IGameSession <|.. GameSessionManager
+    IStatsService <|.. StatsManager
     
-    InGamePlayer "1" --> "1" PlayerProfile
-    StatsService ..> DatabaseRepository : uses
-    StatsService ..> PlayerProfile : updates
-    GameSession ..> GameRecord : creates
-    StatsService ..> GameRecord : processes
-    DatabaseRepository ..> GameRecord : saves
+    GameSessionManager o-- IRulesEngine
+    GameSessionManager o-- IGameRepository
+    GameSessionManager o-- ITileDefinitionRepository
+    GameSessionManager *-- SessionState
+    GameSessionManager *-- BoardState
+    GameSessionManager *-- "0..*" MoveRecord
+    
+    StatsManager o-- IPlayerRepository
+    StatsManager ..> GameRecord : processes
+    
+    IRulesEngine ..> ScoreEvent : creates
+    IRulesEngine ..> ITileDefinitionRepository : uses
+    
+    IRulesEngine ..> BoardState : inspects
+    IRulesEngine ..> MoveRequest : validates
+    
+    SessionState *-- "*" PlayerInGameState
+    GameRecord *-- "*" MoveRecord
+    GameRecord *-- "*" PlayerResult
 ```
