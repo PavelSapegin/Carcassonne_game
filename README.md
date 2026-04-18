@@ -3,6 +3,8 @@
 ```mermaid
 classDiagram
 
+    %% APPLICATION
+
     class IGameSession {
         <<interface>>
         + startGame(playerIds: List~UUID~)
@@ -22,7 +24,7 @@ classDiagram
     class IStatsService {
         <<interface>>
         + processGameResult(record: GameRecord)
-        + getPlayerStats(playerId: UUID) PlayerStats
+        + getPlayerStats(playerId: UUID) PlayerProfile
         + getLeaderboard() List~PlayerProfile~
     }
 
@@ -30,41 +32,43 @@ classDiagram
         - playerRepo: IPlayerRepository
     }
 
+    %% DOMAIN 
+
     class IRulesEngine {
         <<interface>>
         + validateMove(board: BoardState, move: MoveRequest): Boolean
-        + calculateIntermediateScore(board: BoardState, move: MoveRequest): List~ScoreEvent~
+        + calculateIntermediateScore(move: MoveRequest): ScoreEvent
         + calculateFinalScore(board: BoardState): List~ScoreEvent~
     }
 
-    class ITileDefinitionRepository {
-    <<interface>>
-    + getDefinition(tileTypeId: Int): TileDefinition
-    }
     class BoardState {
-        - grid: MutableMap~Point, TileData~
-        + applyMove(move: MoveRequest)
-        + revertMove(move: MoveRequest)
+        - playerSheets: MutableMap~UUID, ScoreSheet~
+        + applyMove(move: MoveRequest, points: Int)
+        + revertMove(move: MoveRecord)
     }
-        class MoveResult {
+
+    class ScoreSheet {
+        <<data class>>
+        + filledCategories: MutableMap~ScoreCategory, Int~
+    }
+
+    class ScoreCategory {
+        <<enumeration>>
+        ONES, TWOS, THREES...
+        FULL_HOUSE, YAHTZEE, CHANCE
+    }
+
+    class MoveResult {
         <<sealed>>
         + isSuccess: Boolean
         + errorMessage: String?
-    }
-    class PlayerResult {
-    <<data class>>
-    + playerId: UUID
-    + score: Int
-    + rank: Int
     }
 
     class MoveRequest {
         <<data class>>
         + playerId: UUID
-        + tileId: Int
-        + coordinates: Point
-        + rotation: Int
-        + meepleZoneId: Int? 
+        + finalDice: List~Int~ 
+        + targetCategory: ScoreCategory 
     }
 
     class MoveRecord {
@@ -87,7 +91,14 @@ classDiagram
     class PlayerInGameState {
         <<data class>>
         + currentScore: Int
-        + meeplesAvailable: Int
+    }
+
+    class ScoreEvent {
+        <<data class>>
+        + playerId: UUID
+        + points: Int
+        + category: ScoreCategory
+        + isBonusApplied: Boolean 
     }
 
     class IPlayerRepository {
@@ -104,7 +115,7 @@ classDiagram
     }
 
     class PlayerProfile {
-        <<data class>>
+        <<entity / data class>>
         + id: UUID
         + username: String
         + eloRating: Int
@@ -113,46 +124,28 @@ classDiagram
     }
 
     class GameRecord {
-        <<data class>>
+        <<entity / data class>>
         + gameId: UUID
         + date: LocalDateTime
         + finalScores: List~PlayerResult~
         + history: List~MoveRecord~
     }
-
-    class TileData {
-        <<data class>>
-        + tileTypeId: Int
-        + rotation: Int
-        + placedMeeple: MeeplePlacement?
-    }
-
-    class MeeplePlacement {
+    
+    class PlayerResult {
         <<data class>>
         + playerId: UUID
-        + zoneId: Int
+        + score: Int
+        + rank: Int
     }
 
-    class ScoreEvent {
-    <<data class>>
-    + playerId: UUID
-    + points: Int
-
-    + returnedMeeples: Int
-    }
-    
-    BoardState *-- "*" TileData : contains in grid
-    TileData *-- "0..1" MeeplePlacement : holds
-
-    BoardState *-- "*" TileData : contains
-    TileData *-- "0..1" MeeplePlacement : holds
+    BoardState *-- "*" ScoreSheet : contains
+    ScoreSheet o-- ScoreCategory : uses
 
     IGameSession <|.. GameSessionManager
     IStatsService <|.. StatsManager
     
     GameSessionManager o-- IRulesEngine
     GameSessionManager o-- IGameRepository
-    GameSessionManager o-- ITileDefinitionRepository
     GameSessionManager *-- SessionState
     GameSessionManager *-- BoardState
     GameSessionManager *-- "0..*" MoveRecord
@@ -161,12 +154,13 @@ classDiagram
     StatsManager ..> GameRecord : processes
     
     IRulesEngine ..> ScoreEvent : creates
-    IRulesEngine ..> ITileDefinitionRepository : uses
-    
     IRulesEngine ..> BoardState : inspects
     IRulesEngine ..> MoveRequest : validates
     
     SessionState *-- "*" PlayerInGameState
     GameRecord *-- "*" MoveRecord
     GameRecord *-- "*" PlayerResult
+    IGameSession ..> MoveResult : returns
+    IPlayerRepository ..> PlayerProfile : manages
+    IStatsService ..> PlayerProfile : uses/returns
 ```
