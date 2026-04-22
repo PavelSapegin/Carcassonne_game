@@ -6,6 +6,8 @@ import java.util.UUID
 
 interface IStatsService {
     fun processGameResult(record: GameRecord)
-    fun getPlayerStats(playerId: UUID) : PlayerProfile
+
+    fun getPlayerStats(playerId: UUID): PlayerProfile
+
     fun getLeaderBoard(): List<PlayerProfile>
 }

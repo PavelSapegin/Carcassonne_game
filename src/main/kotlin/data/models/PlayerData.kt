@@ -7,20 +7,20 @@ import java.util.UUID
 data class PlayerResult(
     val playerId: UUID,
     val score: Int,
-    val rank: Int
+    val rank: Int,
 )
 
 data class GameRecord(
     val gameId: UUID,
     val date: LocalDateTime,
     val finalScores: List<PlayerResult>,
-    val history: List<MoveRecord>
+    val history: List<MoveRecord>,
 )
 
 data class PlayerProfile(
     val id: UUID,
     val name: String,
-    val eloRating: Int,
-    val gamesPlayed: Int,
-    val winRate: Float
+    var eloRating: Int,
+    var gamesPlayed: Int,
+    var winRate: Float,
 )

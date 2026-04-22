@@ -1,14 +1,13 @@
 package domain.models
 
 enum class ScoreCategory {
-
     // UPPER PART
     ONES,
     TWOS,
     THREES,
-    FOURTHS,
+    FOURS,
     FIFTHS,
-    SIXS,
+    SIXES,
 
     // LOWER PART
     THREEKIND,
@@ -17,5 +16,7 @@ enum class ScoreCategory {
     SMALL_STRAIGHT,
     LARGE_STRAIGHT,
     YAHTZEE,
-    CHANCE
+    CHANCE,
+
+    BONUS,
 }

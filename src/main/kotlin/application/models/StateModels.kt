@@ -3,14 +3,13 @@ package application.models
 import java.util.UUID
 
 data class PlayerInGameState(
-    var currentScore: Int
+    var currentScore: Int,
 )
 
-enum class GameStatus
-{
+enum class GameStatus {
     PREPARING,
     IN_PROGRESS,
-    FINISHED
+    FINISHED,
 }
 
 data class SessionState(
@@ -18,10 +17,14 @@ data class SessionState(
     val status: GameStatus,
     var currentPlayerId: UUID,
     val turnOrder: List<UUID>,
-    var players: MutableMap<UUID, PlayerInGameState>
+    var players: MutableMap<UUID, PlayerInGameState>,
 )
 
 sealed class MoveResult(
     val isSuccess: Boolean,
-    val errorMessage: String?
-)
+    val errorMessage: String?,
+) {
+    object Success : MoveResult(isSuccess = true, errorMessage = null)
+
+    class Error(message: String) : MoveResult(isSuccess = false, errorMessage = message)
+}
