@@ -1,4 +1,4 @@
-### Carcassonne assistant
+### Yahtzee assistant
 
 ```mermaid
 classDiagram
@@ -37,7 +37,7 @@ classDiagram
     class IRulesEngine {
         <<interface>>
         + validateMove(board: BoardState, move: MoveRequest): Boolean
-        + calculateIntermediateScore(move: MoveRequest): ScoreEvent
+        + calculateIntermediateScore(board: BoardState, move: MoveRequest): ScoreEvent
         + calculateFinalScore(board: BoardState): List~ScoreEvent~
     }
 
