@@ -125,6 +125,7 @@ class GameSessionManager(
                 results,
                 moveHistory,
             )
+        currentState.status = GameStatus.FINISHED
         gameRepo.saveRecord(finalRecord)
         return finalRecord
     }

@@ -14,17 +14,16 @@ enum class GameStatus {
 
 data class SessionState(
     val gameId: UUID,
-    val status: GameStatus,
+    var status: GameStatus,
     var currentPlayerId: UUID,
     val turnOrder: List<UUID>,
     var players: MutableMap<UUID, PlayerInGameState>,
 )
 
 sealed class MoveResult(
-    val isSuccess: Boolean,
     val errorMessage: String?,
 ) {
-    object Success : MoveResult(isSuccess = true, errorMessage = null)
+    object Success : MoveResult(errorMessage = null)
 
-    class Error(message: String) : MoveResult(isSuccess = false, errorMessage = message)
+    class Error(message: String) : MoveResult(errorMessage = message)
 }
