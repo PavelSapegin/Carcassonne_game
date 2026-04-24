@@ -6,12 +6,51 @@ import domain.models.ScoreCategory
 import domain.models.ScoreEvent
 
 class YahtzeeRulesEngine : IRulesEngine {
+    private val upperCategories =
+        listOf(
+            ScoreCategory.ONES,
+            ScoreCategory.TWOS,
+            ScoreCategory.THREES,
+            ScoreCategory.FOURS,
+            ScoreCategory.FIFTHS,
+            ScoreCategory.SIXES,
+        )
+
+    private val lowerCategories =
+        listOf(
+            ScoreCategory.THREEKIND,
+            ScoreCategory.FOURKIND,
+            ScoreCategory.FULL_HOUSE,
+            ScoreCategory.SMALL_STRAIGHT,
+            ScoreCategory.LARGE_STRAIGHT,
+            ScoreCategory.CHANCE,
+        )
+
     override fun validateMove(
         board: BoardState,
         move: MoveRequest,
     ): Boolean {
-        val sheet = board.playerSheets[move.playerID]
-        return sheet != null && !(sheet.filledCategories.containsKey(move.targetCategory))
+        val sheet = board.playerSheets[move.playerID] ?: return false
+
+        if (sheet.filledCategories.containsKey(move.targetCategory)) {
+            return false
+        }
+
+        val isJoker = isYahtzee(move.finalDice) && sheet.filledCategories[ScoreCategory.YAHTZEE] == 50
+
+        if (isJoker) {
+            val requiredUpperCat = upperCategories[move.finalDice[0] - 1]
+            if (!sheet.filledCategories.containsKey(requiredUpperCat)) {
+                return requiredUpperCat == move.targetCategory
+            } else {
+                val freeLowerCats = lowerCategories.filter { !sheet.filledCategories.containsKey(it) }
+                if (!freeLowerCats.isEmpty()) {
+                    return move.targetCategory in freeLowerCats
+                }
+            }
+        }
+
+        return true
     }
 
     private fun isNOfAKind(
@@ -61,8 +100,12 @@ class YahtzeeRulesEngine : IRulesEngine {
         move: MoveRequest,
     ): ScoreEvent {
         if (move.finalDice.size != 5) {
-            throw NoSuchElementException("Должно быть передано 5 кубиков")
+            throw NoSuchElementException("There should be 5 dices")
         }
+
+        val sheet = board.playerSheets[move.playerID]
+        val isJoker = isYahtzee(move.finalDice) && sheet?.filledCategories[ScoreCategory.YAHTZEE] == 50
+        val bonusPoints = if (isJoker) 100 else 0
 
         val points =
             when (move.targetCategory) {
@@ -75,47 +118,27 @@ class YahtzeeRulesEngine : IRulesEngine {
                 ScoreCategory.SIXES -> move.finalDice.filter { it == 6 }.sum()
 
                 // LOWER PART
-                ScoreCategory.THREEKIND -> if (isNOfAKind(move.finalDice, 3)) move.finalDice.sum() else 0
-                ScoreCategory.FOURKIND -> if (isNOfAKind(move.finalDice, 4)) move.finalDice.sum() else 0
-                ScoreCategory.FULL_HOUSE -> if (isFullHouse(move.finalDice)) 25 else 0
-                ScoreCategory.SMALL_STRAIGHT -> if (isAnyStraight(move.finalDice, 4)) 30 else 0
-                ScoreCategory.LARGE_STRAIGHT -> if (isAnyStraight(move.finalDice, 5)) 40 else 0
-                ScoreCategory.YAHTZEE ->
-                    if (isYahtzee(move.finalDice)) {
-                        if (board.playerSheets[move.playerID]?.filledCategories[ScoreCategory.YAHTZEE] == 50) {
-                            100
-                        } else {
-                            50
-                        }
-                    } else {
-                        0
-                    }
+                ScoreCategory.THREEKIND -> if (isJoker || isNOfAKind(move.finalDice, 3)) move.finalDice.sum() else 0
+                ScoreCategory.FOURKIND -> if (isJoker || isNOfAKind(move.finalDice, 4)) move.finalDice.sum() else 0
+                ScoreCategory.FULL_HOUSE -> if (isJoker || isFullHouse(move.finalDice)) 25 else 0
+                ScoreCategory.SMALL_STRAIGHT -> if (isJoker || isAnyStraight(move.finalDice, 4)) 30 else 0
+                ScoreCategory.LARGE_STRAIGHT -> if (isJoker || isAnyStraight(move.finalDice, 5)) 40 else 0
+                ScoreCategory.YAHTZEE -> if (isYahtzee(move.finalDice)) 50 else 0
+
                 ScoreCategory.CHANCE -> move.finalDice.sum()
 
                 ScoreCategory.BONUS -> 0
             }
         return ScoreEvent(
             move.playerID,
-            points = points,
+            points = points + bonusPoints,
             category = move.targetCategory,
-            isBonusApplied = false,
+            isBonusApplied = isJoker,
         )
-
-        TODO("Solve a Joker bonus")
     }
 
     override fun calculateFinalScore(board: BoardState): List<ScoreEvent> {
         val bonusEvent = mutableListOf<ScoreEvent>()
-        val upperCategories: List<ScoreCategory> =
-            listOf(
-                ScoreCategory.ONES,
-                ScoreCategory.TWOS,
-                ScoreCategory.THREES,
-                ScoreCategory.FOURS,
-                ScoreCategory.FIFTHS,
-                ScoreCategory.SIXES,
-            )
-
         for ((player, sheet) in board.playerSheets) {
             var upperPartScore = 0
 
