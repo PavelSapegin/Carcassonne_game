@@ -7,7 +7,6 @@ data class PlayerInGameState(
 )
 
 enum class GameStatus {
-    PREPARING,
     IN_PROGRESS,
     FINISHED,
 }

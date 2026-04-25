@@ -42,10 +42,6 @@ class GameSessionManager(
     }
 
     override fun registerMove(move: MoveRequest): MoveResult {
-        if (currentState.status == GameStatus.PREPARING) {
-            return MoveResult.Error("Game not yet started.")
-        }
-
         if (currentState.status == GameStatus.FINISHED) {
             return MoveResult.Error("Game finished.")
         }
