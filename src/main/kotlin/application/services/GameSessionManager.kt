@@ -13,6 +13,7 @@ import domain.models.BoardState
 import domain.models.MoveRecord
 import domain.models.MoveRequest
 import domain.models.ScoreCategory
+import domain.models.ValidationResult
 import java.time.LocalDateTime
 import java.util.UUID
 import java.util.UUID.randomUUID
@@ -61,7 +62,7 @@ class GameSessionManager(
 
         val resultChecking = referee.validateMove(board, move)
 
-        if (resultChecking) {
+        if (resultChecking is ValidationResult.Correct) {
             val resultMove = referee.calculateIntermediateScore(board, move)
             board.applyMove(move, resultMove.points)
             currentState.players[currentState.currentPlayerId]?.currentScore += resultMove.points
@@ -71,7 +72,8 @@ class GameSessionManager(
 
             return MoveResult.Success
         } else {
-            return MoveResult.Error("The current column is occupied.")
+            val errorMessage = (resultChecking as ValidationResult.Error).message
+            return MoveResult.Error(errorMessage)
         }
     }
 
@@ -85,7 +87,7 @@ class GameSessionManager(
             playerState.currentScore -= lastMove.pointScored
         }
         board.revertMove(lastMove)
-        currentPlayerIdx = if (currentPlayerIdx == currentState.turnOrder.size - 1) 0 else currentPlayerIdx - 1
+        currentPlayerIdx = if (currentPlayerIdx == 0) currentState.turnOrder.size - 1 else currentPlayerIdx - 1
         currentState.currentPlayerId = currentState.turnOrder[currentPlayerIdx]
     }
 
