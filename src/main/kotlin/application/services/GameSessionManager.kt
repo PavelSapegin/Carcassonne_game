@@ -23,7 +23,7 @@ class GameSessionManager(
 ) : IGameSession {
     override lateinit var currentState: SessionState
     var moveHistory: MutableList<MoveRecord> = mutableListOf<MoveRecord>()
-    lateinit var board: BoardState
+    override lateinit var board: BoardState
     var currentPlayerIdx = 0
 
     override fun startGame(playerIds: List<UUID>) {
@@ -64,7 +64,10 @@ class GameSessionManager(
         if (resultChecking) {
             val resultMove = referee.calculateIntermediateScore(board, move)
             board.applyMove(move, resultMove.points)
-            currentState.players[currentState.currentPlayerId]?.currentScore += resultMove.points
+            val player = currentState.players[currentState.currentPlayerId]
+            if (player != null) {
+                player.currentScore += resultMove.points
+            }
             moveHistory.add(MoveRecord(moveHistory.size, move, LocalDateTime.now(), resultMove.points))
             currentPlayerIdx = (currentPlayerIdx + 1) % currentState.turnOrder.size
             currentState.currentPlayerId = currentState.turnOrder[currentPlayerIdx]
