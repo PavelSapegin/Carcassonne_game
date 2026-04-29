@@ -4,6 +4,7 @@ import data.repositories.InMemoryGameRepository
 import domain.engine.YahtzeeRulesEngine
 import domain.models.MoveRequest
 import domain.models.ScoreCategory
+import domain.models.ValidationResult
 import org.junit.jupiter.api.BeforeEach
 import java.util.UUID
 import java.util.UUID.randomUUID
@@ -56,7 +57,7 @@ class GameSessionManagerTest {
 
         assertEquals(0, state.players[p1]?.currentScore)
         assertEquals(p1, state.currentPlayerId)
-        assertTrue(tempEngine.validateMove(manager.board, request))
+        assertEquals(tempEngine.validateMove(manager.board, request), ValidationResult.Correct)
     }
 
     @Test
