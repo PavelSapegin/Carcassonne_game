@@ -2,11 +2,11 @@ import domain.engine.YahtzeeRulesEngine
 import domain.models.BoardState
 import domain.models.MoveRequest
 import domain.models.ScoreCategory
+import domain.models.ValidationResult
 import java.util.UUID.randomUUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertNotEquals
 
 class YahtzeeRulesEngineTest {
     private val engine = YahtzeeRulesEngine()
@@ -55,8 +55,8 @@ class YahtzeeRulesEngineTest {
     fun `ValidateMove must return false if category is taken`() {
         val request = MoveRequest(tempPlayerId, listOf(1, 2, 3, 4, 5), ScoreCategory.ONES)
 
-        assertTrue(engine.validateMove(tempBoard, request))
+        assertEquals(engine.validateMove(tempBoard, request), ValidationResult.Correct)
         tempBoard.applyMove(request, 5)
-        assertFalse(engine.validateMove(tempBoard, request))
+        assertNotEquals(engine.validateMove(tempBoard, request), ValidationResult.Correct)
     }
 }

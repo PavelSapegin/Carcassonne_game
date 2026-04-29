@@ -3,12 +3,13 @@ package domain.engine
 import domain.models.BoardState
 import domain.models.MoveRequest
 import domain.models.ScoreEvent
+import domain.models.ValidationResult
 
 interface IRulesEngine {
     fun validateMove(
         board: BoardState,
         move: MoveRequest,
-    ): Boolean
+    ): ValidationResult
 
     fun calculateIntermediateScore(
         board: BoardState,

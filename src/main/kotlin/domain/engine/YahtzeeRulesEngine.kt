@@ -4,6 +4,7 @@ import domain.models.BoardState
 import domain.models.MoveRequest
 import domain.models.ScoreCategory
 import domain.models.ScoreEvent
+import domain.models.ValidationResult
 
 class YahtzeeRulesEngine : IRulesEngine {
     private val upperCategories =
@@ -29,11 +30,11 @@ class YahtzeeRulesEngine : IRulesEngine {
     override fun validateMove(
         board: BoardState,
         move: MoveRequest,
-    ): Boolean {
-        val sheet = board.playerSheets[move.playerID] ?: return false
+    ): ValidationResult {
+        val sheet = board.playerSheets[move.playerID] ?: return ValidationResult.Error("Player not found")
 
         if (sheet.filledCategories.containsKey(move.targetCategory)) {
-            return false
+            return ValidationResult.Error("This category is already taken")
         }
 
         val isJoker = isYahtzee(move.finalDice) && sheet.filledCategories[ScoreCategory.YAHTZEE] == 50
@@ -41,16 +42,24 @@ class YahtzeeRulesEngine : IRulesEngine {
         if (isJoker) {
             val requiredUpperCat = upperCategories[move.finalDice[0] - 1]
             if (!sheet.filledCategories.containsKey(requiredUpperCat)) {
-                return requiredUpperCat == move.targetCategory
+                return if (requiredUpperCat == move.targetCategory) {
+                    ValidationResult.Correct
+                } else {
+                    ValidationResult.Error("With Joker rule you MUST choose the category $requiredUpperCat")
+                }
             } else {
                 val freeLowerCats = lowerCategories.filter { !sheet.filledCategories.containsKey(it) }
                 if (!freeLowerCats.isEmpty()) {
-                    return move.targetCategory in freeLowerCats
+                    return if (move.targetCategory in freeLowerCats) {
+                        ValidationResult.Correct
+                    } else {
+                        ValidationResult.Error("With Joker rule you MUST choose some free category in down section.")
+                    }
                 }
             }
         }
 
-        return true
+        return ValidationResult.Correct
     }
 
     private fun isNOfAKind(

@@ -26,3 +26,9 @@ data class MoveRecord(
 data class ScoreSheet(
     val filledCategories: MutableMap<ScoreCategory, Int> = mutableMapOf(),
 )
+
+sealed class ValidationResult {
+    object Correct : ValidationResult()
+
+    class Error(val message: String) : ValidationResult()
+}
