@@ -25,6 +25,7 @@ data class UIState(
     val scoreBoard: Map<UUID, Map<ScoreCategory, String>> = emptyMap(),
     val totalScores: Map<UUID, Int> = emptyMap(),
     val finalLeaderBoard: List<PlayerProfile> = emptyList(),
+    val isGameOver: Boolean = false,
 )
 
 // ViewModel for the Yahtzee assistant
@@ -107,7 +108,7 @@ class YahtzeeViewModel(
 
             _uiState.value =
                 _uiState.value.copy(
-                    currentScreen = AppScreen.LEADERBOARD,
+                    // currentScreen = AppScreen.LEADERBOARD,
                     finalLeaderBoard =
                         statsManager.getLeaderBoard().sortedByDescending { it.eloRating },
                 )
@@ -130,26 +131,27 @@ class YahtzeeViewModel(
         val newScoreBoard = mutableMapOf<UUID, Map<ScoreCategory, String>>()
         val newTotals = mutableMapOf<UUID, Int>()
         val pMap = _uiState.value.pendingPlayers
-        if (state.status != GameStatus.FINISHED) {
-            for ((playerId, sheet) in gameSession.board.playerSheets) {
-                val column = mutableMapOf<ScoreCategory, String>()
+        // if (state.status != GameStatus.FINISHED) {
+        for ((playerId, sheet) in gameSession.board.playerSheets) {
+            val column = mutableMapOf<ScoreCategory, String>()
 
-                for (cat in ScoreCategory.entries) {
-                    val score = sheet.filledCategories[cat]
-                    column[cat] = score?.toString() ?: "-"
-                }
-
-                newScoreBoard[playerId] = column
-                newTotals[playerId] =
-                    state.players[playerId]?.currentScore ?: 0
+            for (cat in ScoreCategory.entries) {
+                val score = sheet.filledCategories[cat]
+                column[cat] = score?.toString() ?: "-"
             }
+
+            newScoreBoard[playerId] = column
+            newTotals[playerId] =
+                state.players[playerId]?.currentScore ?: 0
         }
+        // }
 
         _uiState.value =
             _uiState.value.copy(
                 currentPlayerName = pMap[state.currentPlayerId] ?: "",
                 scoreBoard = newScoreBoard,
                 totalScores = newTotals,
+                isGameOver = state.status == GameStatus.FINISHED,
             )
     }
 

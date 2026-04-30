@@ -48,10 +48,15 @@ fun yahtzeeAppScreen(viewModel: YahtzeeViewModel) {
 
     // Render different screens based on the current screen state
     when (state.currentScreen) {
-        AppScreen.SETUP -> setupScreen(state, {name -> viewModel.addPlayer(name)},{viewModel.startGame()})
-        AppScreen.GAME -> gameScreen(state, {viewModel.undoMove()},
-            {viewModel.endGame()},
-            {diceInput, category -> viewModel.submitMove(diceInput,category)})
+        AppScreen.SETUP -> setupScreen(state, { name -> viewModel.addPlayer(name) }, { viewModel.startGame() })
+        AppScreen.GAME ->
+            gameScreen(
+                state,
+                { viewModel.undoMove() },
+                { viewModel.endGame() },
+                { diceInput, category -> viewModel.submitMove(diceInput, category) },
+                { viewModel.showLeaderBoard() },
+            )
         AppScreen.LEADERBOARD -> leaderBoardTable(state)
     }
 }
@@ -61,7 +66,7 @@ fun yahtzeeAppScreen(viewModel: YahtzeeViewModel) {
 fun setupScreen(
     state: UIState,
     addPlayer: (String) -> Unit,
-    startGame: () -> Unit
+    startGame: () -> Unit,
 ) {
     var nameInput by remember { mutableStateOf("") }
 
@@ -113,15 +118,17 @@ fun gameScreen(
     state: UIState,
     undoMove: () -> Unit,
     endGame: () -> Unit,
-    submitMove: (String, ScoreCategory) -> Unit
+    submitMove: (String, ScoreCategory) -> Unit,
+    showLeaderBoard: () -> Unit,
 ) {
     var diceInput by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         // HEADER
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            val headerText = if (state.isGameOver) "GAME OVER" else "Current move: ${state.currentPlayerName}"
             Text(
-                text = "Current move: ${state.currentPlayerName}",
+                text = headerText,
                 style = MaterialTheme.typography.h4,
                 fontWeight = FontWeight.Bold,
             )
@@ -135,8 +142,8 @@ fun gameScreen(
         // TABLE
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (state.scoreBoard.isNotEmpty()) {
-                scoreBoardTable(state, categorySelected = {cat ->
-                    submitMove(diceInput,cat)
+                scoreBoardTable(state, categorySelected = { cat ->
+                    submitMove(diceInput, cat)
                     diceInput = ""
                 })
             }
@@ -144,32 +151,54 @@ fun gameScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // -FOOTER + INPUT
+        // FOOTER + INPUT
         Row(
             modifier = Modifier.fillMaxWidth().background(Color(0xFFF5F5F5)).padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Left button
-            Button(onClick = { undoMove() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFCDD2))) {
-                Text("Undo move")
-            }
+            if (!state.isGameOver) {
+                // Left button
+                Button(
+                    onClick = { undoMove() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFCDD2)),
+                ) {
+                    Text("Undo move")
+                }
 
-            // Center input
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                visualDiceRow(diceInput) // Отрисовка кубиков!
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = diceInput,
-                    onValueChange = { diceInput = it },
-                    label = { Text("Input dice:") },
-                    modifier = Modifier.width(200.dp),
-                )
-            }
+                // Center input
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    visualDiceRow(diceInput) // Отрисовка кубиков!
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = diceInput,
+                        onValueChange = { diceInput = it },
+                        label = { Text("Input dice:") },
+                        modifier = Modifier.width(200.dp),
+                    )
+                }
 
-            // Right button
-            Button(onClick = { endGame() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.LightGray)) {
-                Text("End Game")
+                // Right button
+                Button(
+                    onClick = { endGame() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.LightGray),
+                ) {
+                    Text("End Game")
+                }
+            } else {
+                Spacer(Modifier.weight(1f))
+                Button(
+                    onClick = { (showLeaderBoard()) },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Blue),
+                    modifier = Modifier.height(50.dp),
+                ) {
+                    Text(
+                        "Show LeaderBoard",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
             }
         }
     }
@@ -264,7 +293,7 @@ fun dot(visible: Boolean) {
 @Composable
 fun scoreBoardTable(
     state: UIState,
-    categorySelected: (ScoreCategory) -> Unit
+    categorySelected: (ScoreCategory) -> Unit,
 ) {
     val players = state.scoreBoard.keys.toList()
 
@@ -283,7 +312,7 @@ fun scoreBoardTable(
             Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(modifier = Modifier.weight(1.5f), verticalAlignment = Alignment.CenterVertically) {
                     Text(category.name, modifier = Modifier.weight(1f))
-                    if (category != ScoreCategory.BONUS) {
+                    if (category != ScoreCategory.BONUS && !state.isGameOver) {
                         Button(
                             onClick = {
                                 categorySelected(category)
