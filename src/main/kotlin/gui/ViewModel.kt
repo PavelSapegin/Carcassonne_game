@@ -22,8 +22,8 @@ data class UIState(
     val pendingPlayers: Map<UUID, String> = emptyMap(),
     val currentPlayerName: String = "",
     val errorText: String = "",
-    val scoreBoard: Map<String, Map<ScoreCategory, String>> = emptyMap(),
-    val totalScores: Map<String, Int> = emptyMap(),
+    val scoreBoard: Map<UUID, Map<ScoreCategory, String>> = emptyMap(),
+    val totalScores: Map<UUID, Int> = emptyMap(),
     val finalLeaderBoard: List<PlayerProfile> = emptyList(),
 )
 
@@ -111,20 +111,27 @@ class YahtzeeViewModel(
                     finalLeaderBoard =
                         statsManager.getLeaderBoard().sortedByDescending { it.eloRating },
                 )
+            syncGameState()
         } catch (e: Exception) {
             showError(e.message ?: "Can't to finish game.")
         }
     }
 
+    fun showLeaderBoard() {
+        _uiState.value =
+            _uiState.value.copy(
+                currentScreen = AppScreen.LEADERBOARD,
+            )
+    }
+
     // Private helper function to synchronize the UI state with the current game state
     private fun syncGameState() {
         val state = gameSession.currentState
-        val newScoreBoard = mutableMapOf<String, Map<ScoreCategory, String>>()
-        val newTotals = mutableMapOf<String, Int>()
+        val newScoreBoard = mutableMapOf<UUID, Map<ScoreCategory, String>>()
+        val newTotals = mutableMapOf<UUID, Int>()
         val pMap = _uiState.value.pendingPlayers
         if (state.status != GameStatus.FINISHED) {
             for ((playerId, sheet) in gameSession.board.playerSheets) {
-                val playerName = pMap[playerId] ?: "Unknown"
                 val column = mutableMapOf<ScoreCategory, String>()
 
                 for (cat in ScoreCategory.entries) {
@@ -132,8 +139,8 @@ class YahtzeeViewModel(
                     column[cat] = score?.toString() ?: "-"
                 }
 
-                newScoreBoard[playerName] = column
-                newTotals[playerName] =
+                newScoreBoard[playerId] = column
+                newTotals[playerId] =
                     state.players[playerId]?.currentScore ?: 0
             }
         }

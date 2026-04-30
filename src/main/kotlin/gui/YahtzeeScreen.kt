@@ -81,10 +81,10 @@ fun setupScreen(
                 keyboardActions = KeyboardActions(onDone = { onAddPlayer() }),
             )
             Spacer(Modifier.width(8.dp))
-            Button(onClick = {
-                viewModel.addPlayer(nameInput)
-                nameInput = ""
-            }, modifier = Modifier.height(56.dp)) {
+            Button(
+                onClick = onAddPlayer,
+                modifier = Modifier.height(56.dp),
+            ) {
                 Text("Add")
             }
         }
@@ -266,7 +266,10 @@ fun scoreBoardTable(
         item {
             Row(modifier = Modifier.background(Color.LightGray).padding(8.dp)) {
                 Text("Category", modifier = Modifier.weight(1.5f), fontWeight = FontWeight.Bold)
-                players.forEach { Text(it, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold) }
+                players.forEach { id ->
+                    val playerName = state.pendingPlayers[id] ?: "Unknown"
+                    Text(playerName, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                }
             }
         }
 
@@ -286,8 +289,8 @@ fun scoreBoardTable(
                         }
                     }
                 }
-                players.forEach { playerName ->
-                    Text(state.scoreBoard[playerName]?.get(category) ?: "-", modifier = Modifier.weight(1f))
+                players.forEach { id ->
+                    Text(state.scoreBoard[id]?.get(category) ?: "-", modifier = Modifier.weight(1f))
                 }
             }
             Divider()
@@ -295,8 +298,8 @@ fun scoreBoardTable(
         item {
             Row(modifier = Modifier.background(Color(0xFFE0E0E0)).padding(8.dp)) {
                 Text("TOTAL:", modifier = Modifier.weight(1.5f), fontWeight = FontWeight.Bold)
-                players.forEach { playerName ->
-                    Text(state.totalScores[playerName]?.toString() ?: "0", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                players.forEach { id ->
+                    Text(state.totalScores[id]?.toString() ?: "0", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
                 }
             }
         }
