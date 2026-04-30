@@ -48,8 +48,10 @@ fun yahtzeeAppScreen(viewModel: YahtzeeViewModel) {
 
     // Render different screens based on the current screen state
     when (state.currentScreen) {
-        AppScreen.SETUP -> setupScreen(state, viewModel)
-        AppScreen.GAME -> gameScreen(state, viewModel)
+        AppScreen.SETUP -> setupScreen(state, {name -> viewModel.addPlayer(name)},{viewModel.startGame()})
+        AppScreen.GAME -> gameScreen(state, {viewModel.undoMove()},
+            {viewModel.endGame()},
+            {diceInput, category -> viewModel.submitMove(diceInput,category)})
         AppScreen.LEADERBOARD -> leaderBoardTable(state)
     }
 }
@@ -58,12 +60,13 @@ fun yahtzeeAppScreen(viewModel: YahtzeeViewModel) {
 @Composable
 fun setupScreen(
     state: UIState,
-    viewModel: YahtzeeViewModel,
+    addPlayer: (String) -> Unit,
+    startGame: () -> Unit
 ) {
     var nameInput by remember { mutableStateOf("") }
 
     val onAddPlayer = {
-        viewModel.addPlayer(nameInput)
+        addPlayer(nameInput)
         nameInput = ""
     }
     // UI layout for player registration and game start
@@ -98,7 +101,7 @@ fun setupScreen(
         state.pendingPlayers.values.forEach { Text("- $it") }
 
         Spacer(Modifier.height(24.dp))
-        Button(onClick = { viewModel.startGame() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Green)) {
+        Button(onClick = { startGame() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Green)) {
             Text("START GAME", fontWeight = FontWeight.Bold)
         }
     }
@@ -108,7 +111,9 @@ fun setupScreen(
 @Composable
 fun gameScreen(
     state: UIState,
-    viewModel: YahtzeeViewModel,
+    undoMove: () -> Unit,
+    endGame: () -> Unit,
+    submitMove: (String, ScoreCategory) -> Unit
 ) {
     var diceInput by remember { mutableStateOf("") }
 
@@ -130,7 +135,10 @@ fun gameScreen(
         // TABLE
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (state.scoreBoard.isNotEmpty()) {
-                scoreBoardTable(state, viewModel, diceInput) { diceInput = "" }
+                scoreBoardTable(state, categorySelected = {cat ->
+                    submitMove(diceInput,cat)
+                    diceInput = ""
+                })
             }
         }
 
@@ -143,7 +151,7 @@ fun gameScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Left button
-            Button(onClick = { viewModel.undoMove() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFCDD2))) {
+            Button(onClick = { undoMove() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFFCDD2))) {
                 Text("Undo move")
             }
 
@@ -160,7 +168,7 @@ fun gameScreen(
             }
 
             // Right button
-            Button(onClick = { viewModel.endGame() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.LightGray)) {
+            Button(onClick = { endGame() }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.LightGray)) {
                 Text("End Game")
             }
         }
@@ -256,9 +264,7 @@ fun dot(visible: Boolean) {
 @Composable
 fun scoreBoardTable(
     state: UIState,
-    viewModel: YahtzeeViewModel,
-    currentDiceInput: String,
-    onMoveSubmitted: () -> Unit,
+    categorySelected: (ScoreCategory) -> Unit
 ) {
     val players = state.scoreBoard.keys.toList()
 
@@ -280,8 +286,7 @@ fun scoreBoardTable(
                     if (category != ScoreCategory.BONUS) {
                         Button(
                             onClick = {
-                                viewModel.submitMove(currentDiceInput, category)
-                                onMoveSubmitted()
+                                categorySelected(category)
                             },
                             modifier = Modifier.height(30.dp),
                         ) {
