@@ -49,7 +49,7 @@ class YahtzeeRulesEngine : IRulesEngine {
                 }
             } else {
                 val freeLowerCats = lowerCategories.filter { !sheet.filledCategories.containsKey(it) }
-                if (!freeLowerCats.isEmpty()) {
+                if (freeLowerCats.isNotEmpty()) {
                     return if (move.targetCategory in freeLowerCats) {
                         ValidationResult.Correct
                     } else {

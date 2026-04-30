@@ -19,13 +19,13 @@ import java.util.UUID
 import java.util.UUID.randomUUID
 
 class GameSessionManager(
-    val referee: IRulesEngine,
-    val gameRepo: IGameRepository,
+    private val referee: IRulesEngine,
+    private val gameRepo: IGameRepository,
 ) : IGameSession {
     override lateinit var currentState: SessionState
     var moveHistory: MutableList<MoveRecord> = mutableListOf<MoveRecord>()
     lateinit var board: BoardState
-    var currentPlayerIdx = 0
+    private var currentPlayerIdx = 0
 
     override fun startGame(playerIds: List<UUID>) {
         if (playerIds.isEmpty()) {
@@ -65,7 +65,9 @@ class GameSessionManager(
         if (resultChecking is ValidationResult.Correct) {
             val resultMove = referee.calculateIntermediateScore(board, move)
             board.applyMove(move, resultMove.points)
-            currentState.players[currentState.currentPlayerId]?.currentScore += resultMove.points
+            currentState.players[currentState.currentPlayerId]?.let { playerState ->
+                playerState.currentScore += resultMove.points
+            }
             moveHistory.add(MoveRecord(moveHistory.size, move, LocalDateTime.now(), resultMove.points))
             currentPlayerIdx = (currentPlayerIdx + 1) % currentState.turnOrder.size
             currentState.currentPlayerId = currentState.turnOrder[currentPlayerIdx]
